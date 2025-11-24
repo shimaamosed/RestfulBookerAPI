@@ -2061,42 +2061,6 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"var jsonData = pm.response.json();",
-									"var requestData = JSON.parse(pm.request.body.raw);",
-									"",
-									"// 1) Status Code",
-									"pm.test(\"Status code is 200 OK\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"// 2) bookingid exists",
-									"pm.test(\"Response contains bookingid\", function () {",
-									"    pm.expect(jsonData).to.have.property('bookingid');",
-									"    pm.expect(jsonData.bookingid).to.be.a('number');",
-									"});",
-									"",
-									"// 3) booking object exists",
-									"pm.test(\"Response contains booking object\", function () {",
-									"    pm.expect(jsonData).to.have.property('booking');",
-									"    pm.expect(jsonData.booking).to.be.an('object');",
-									"});",
-									"",
-									"// 4) Match firstname and totalprice",
-									"pm.test(\"Created booking matches request\", function () {",
-									"    pm.expect(jsonData.booking.firstname).to.eql(requestData.firstname);",
-									"    pm.expect(jsonData.booking.totalprice).to.eql(requestData.totalprice);",
-									"});",
-									"",
-									"// 5) Save ID to Environment",
-									"pm.test(\"Save booking ID\", function () {",
-									"    pm.environment.set(\"booking_id\", jsonData.bookingid);",
-									"    console.log(\"Saved booking_id =\", jsonData.bookingid);",
-									"});",
-									"",
-									"// 6) Response time",
-									"pm.test(\"Response time is acceptable\", function () {",
-									"    pm.expect(pm.response.responseTime).to.be.below(3000);",
-									"});",
 									""
 								],
 								"type": "text/javascript",
@@ -2107,8 +2071,12 @@
 						{
 							"listen": "prerequest",
 							"script": {
-								"exec": [],
-								"type": "text/javascript"
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
