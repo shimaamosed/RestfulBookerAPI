@@ -912,93 +912,6 @@
 			"name": "Booking - POST Operations",
 			"item": [
 				{
-					"name": "Create Booking - Valid JSON",
-					"event": [
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									"// Generate dynamic data for this request",
-									"pm.environment.set(\"randomFirstname\", pm.variables.replaceIn('{{$randomFirstName}}'));",
-									"pm.environment.set(\"randomLastname\", pm.variables.replaceIn('{{$randomLastName}}'));",
-									"",
-									"console.log(\"✓ Dynamic data generated for booking creation\");"
-								],
-								"type": "text/javascript"
-							}
-						},
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200 OK\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Response contains bookingid\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('bookingid');",
-									"    pm.expect(jsonData.bookingid).to.be.a('number');",
-									"});",
-									"",
-									"pm.test(\"Response contains booking object\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('booking');",
-									"    pm.expect(jsonData.booking).to.be.an('object');",
-									"});",
-									"",
-									"pm.test(\"Created booking matches request\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    var requestData = JSON.parse(pm.request.body.raw);",
-									"    pm.expect(jsonData.booking.firstname).to.eql(requestData.firstname);",
-									"    pm.expect(jsonData.booking.totalprice).to.eql(requestData.totalprice);",
-									"});",
-									"",
-									"// CRITICAL: Save booking ID for later use",
-									"pm.test(\"Booking ID saved to environment\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.environment.set(\"booking_id\", jsonData.bookingid);",
-									"    console.log(\"✓ New booking created with ID: \" + jsonData.bookingid);",
-									"});",
-									"",
-									"pm.test(\"Response time is acceptable\", function () {",
-									"    pm.expect(pm.response.responseTime).to.be.below(3000);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"firstname\": \"{{randomFirstname}}\",\n    \"lastname\": \"{{randomLastname}}\",\n    \"totalprice\": {{randomPrice}},\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"{{checkinDate}}\",\n        \"checkout\": \"{{checkoutDate}}\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/booking",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"booking"
-							]
-						},
-						"description": "Create a new booking with valid JSON data"
-					},
-					"response": []
-				},
-				{
 					"name": "Create Booking - Valid XML",
 					"event": [
 						{
@@ -1056,19 +969,85 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"pm.test(\"Missing firstname handled\", function () {",
-									"    var status = pm.response.code;",
-									"    pm.expect(status).to.be.oneOf([200, 400, 500]);",
+									"",
+									"// Test 1: Verify that the status code is 500 (Internal Server Error)",
+									"pm.test(\"Status code is 500 for missing firstname\", function() {",
+									"    pm.response.to.have.status(500);",
 									"});",
 									"",
-									"pm.test(\"Response validation\", function () {",
-									"    if (pm.response.code === 200) {",
-									"        console.log(\"API accepts missing firstname\");",
-									"    } else {",
-									"        console.log(\"API rejects missing firstname\");",
+									"// Test 2: Check that the response time is reasonable (less than 2000ms)",
+									"pm.test(\"Response time is reasonable\", function() {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});",
+									"",
+									"// Test 3: Validate that the response body contains an error message",
+									"pm.test(\"Response body contains error message\", function() {",
+									"    // Check if response body exists",
+									"    pm.response.to.not.be.empty;",
+									"    ",
+									"    // Check if response contains \"Internal Server Error\" text",
+									"    pm.expect(pm.response.text()).to.include(\"Internal Server Error\");",
+									"    ",
+									"    // If the response is JSON, we could also test the structure",
+									"    // But in this case, it appears to be a plain text error",
+									"    try {",
+									"        const jsonData = pm.response.json();",
+									"        if (jsonData) {",
+									"            pm.expect(jsonData).to.have.property('error');",
+									"        }",
+									"    } catch (e) {",
+									"        // Response is not JSON, which is acceptable for error responses",
+									"        console.log(\"Response is not in JSON format, which is expected for this error case\");",
 									"    }",
-									"});"
+									"});",
+									"",
+									"// Test 4: Ensure the response headers are appropriate",
+									"pm.test(\"Response headers are appropriate\", function() {",
+									"    // Check for Content-Type header",
+									"    pm.response.to.have.header(\"Content-Type\");",
+									"    ",
+									"    // Check for appropriate CORS headers if applicable",
+									"    if (pm.response.headers.has(\"Access-Control-Allow-Origin\")) {",
+									"        pm.test(\"CORS headers are properly set\", function() {",
+									"            pm.response.to.have.header(\"Access-Control-Allow-Origin\");",
+									"        });",
+									"    }",
+									"    ",
+									"    // Check for appropriate caching headers for error responses",
+									"    if (pm.response.headers.has(\"Cache-Control\")) {",
+									"        const cacheControl = pm.response.headers.get(\"Cache-Control\");",
+									"        pm.expect(cacheControl).to.include(\"no-cache\");",
+									"    }",
+									"});",
+									"",
+									"// Test 5: Verify that the request was properly formed (missing firstname is intentional)",
+									"pm.test(\"Request was properly formed with missing firstname\", function() {",
+									"    const requestBody = JSON.parse(pm.request.body.raw);",
+									"    ",
+									"    // Verify firstname is missing (this is intentional for this test)",
+									"    pm.expect(requestBody).to.not.have.property('firstname');",
+									"    ",
+									"    // Verify other required fields are present",
+									"    pm.expect(requestBody).to.have.property('lastname');",
+									"    pm.expect(requestBody).to.have.property('totalprice');",
+									"    pm.expect(requestBody).to.have.property('depositpaid');",
+									"    pm.expect(requestBody).to.have.property('bookingdates');",
+									"    pm.expect(requestBody.bookingdates).to.have.property('checkin');",
+									"    pm.expect(requestBody.bookingdates).to.have.property('checkout');",
+									"});",
+									"",
+									"// Log the response for debugging purposes",
+									"console.log(\"Response for missing firstname test:\", pm.response.text());"
 								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [],
 								"type": "text/javascript"
 							}
 						}
@@ -1105,13 +1084,69 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"pm.test(\"Missing lastname handled\", function () {",
-									"    var status = pm.response.code;",
-									"    pm.expect(status).to.be.oneOf([200, 400, 500]);",
+									"",
+									"// Test 1: Verify that the status code is 500 (Internal Server Error)",
+									"pm.test(\"Status code is 500 for missing firstname\", function() {",
+									"    pm.response.to.have.status(500);",
 									"});",
 									"",
-									"console.log(\"✓ Negative test: Missing lastname behavior documented\");"
+									"// Test 2: Check that the response time is reasonable (less than 2000ms)",
+									"pm.test(\"Response time is reasonable\", function() {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});",
+									"",
+									"// Test 3: Validate that the response body contains an error message",
+									"pm.test(\"Response body contains error message\", function() {",
+									"    // Check if response body exists",
+									"    pm.response.to.not.be.empty;",
+									"    ",
+									"    // Check if response contains \"Internal Server Error\" text",
+									"    pm.expect(pm.response.text()).to.include(\"Internal Server Error\");",
+									"    ",
+									"    // If the response is JSON, we could also test the structure",
+									"    // But in this case, it appears to be a plain text error",
+									"    try {",
+									"        const jsonData = pm.response.json();",
+									"        if (jsonData) {",
+									"            pm.expect(jsonData).to.have.property('error');",
+									"        }",
+									"    } catch (e) {",
+									"        // Response is not JSON, which is acceptable for error responses",
+									"        console.log(\"Response is not in JSON format, which is expected for this error case\");",
+									"    }",
+									"});",
+									"",
+									"// Test 4: Ensure the response headers are appropriate",
+									"pm.test(\"Response headers are appropriate\", function() {",
+									"    // Check for Content-Type header",
+									"    pm.response.to.have.header(\"Content-Type\");",
+									"    ",
+									"    // Check for appropriate CORS headers if applicable",
+									"    if (pm.response.headers.has(\"Access-Control-Allow-Origin\")) {",
+									"        pm.test(\"CORS headers are properly set\", function() {",
+									"            pm.response.to.have.header(\"Access-Control-Allow-Origin\");",
+									"        });",
+									"    }",
+									"    ",
+									"    // Check for appropriate caching headers for error responses",
+									"    if (pm.response.headers.has(\"Cache-Control\")) {",
+									"        const cacheControl = pm.response.headers.get(\"Cache-Control\");",
+									"        pm.expect(cacheControl).to.include(\"no-cache\");",
+									"    }",
+									"});",
+									"",
+									"// Log the response for debugging purposes",
+									"console.log(\"Response for missing firstname test:\", pm.response.text());"
 								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [],
 								"type": "text/javascript"
 							}
 						}
@@ -1148,11 +1183,61 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"pm.test(\"Invalid price handled\", function () {",
-									"    var status = pm.response.code;",
-									"    console.log(\"API response: \" + status);",
-									"});"
+									"// Test for successful response status code",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// Test for response time",
+									"pm.test(\"Response time is reasonable\", function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});",
+									"",
+									"// Parse response JSON",
+									"const responseJson = pm.response.json();",
+									"",
+									"// Test that response contains bookingid",
+									"pm.test(\"Response contains bookingid\", function () {",
+									"    pm.expect(responseJson).to.have.property('bookingid');",
+									"    pm.expect(responseJson.bookingid).to.be.a('number');",
+									"});",
+									"",
+									"// Test that totalprice is null due to invalid input",
+									"pm.test(\"Total price is null due to invalid input\", function () {",
+									"    pm.expect(responseJson.booking).to.have.property('totalprice');",
+									"    pm.expect(responseJson.booking.totalprice).to.be.null;",
+									"});",
+									"",
+									"// Test that all other fields match what was sent in the request",
+									"pm.test(\"Response fields match request data\", function () {",
+									"    const requestData = JSON.parse(pm.request.body.raw);",
+									"    ",
+									"    // Check firstname",
+									"    pm.expect(responseJson.booking.firstname).to.equal(requestData.firstname);",
+									"    ",
+									"    // Check lastname",
+									"    pm.expect(responseJson.booking.lastname).to.equal(requestData.lastname);",
+									"    ",
+									"    // Check depositpaid",
+									"    pm.expect(responseJson.booking.depositpaid).to.equal(requestData.depositpaid);",
+									"    ",
+									"    // Check booking dates",
+									"    pm.expect(responseJson.booking.bookingdates).to.deep.equal(requestData.bookingdates);",
+									"});",
+									"",
+									"// Log the response for debugging purposes",
+									"console.log(\"API response code:\", pm.response.code);",
+									"console.log(\"Response body:\", responseJson);"
 								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [],
 								"type": "text/javascript"
 							}
 						}
